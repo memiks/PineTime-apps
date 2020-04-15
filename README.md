@@ -1,5 +1,5 @@
 # Overview
-This is an attempt of creating a firware for the Pine64 PineTime. This project is based on [https://github.com/bosmoment/PineTime-apps][https://github.com/bosmoment/PineTime-apps]
+This is an attempt of creating a firware for the Pine64 PineTime. This project is based on [https://github.com/bosmoment/PineTime-apps](https://github.com/bosmoment/PineTime-apps)
 
 # Notes
 
