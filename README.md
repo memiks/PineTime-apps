@@ -1,5 +1,5 @@
 # Overview
-This is an attempt of creating a firware for the Pine64 PineTime. This project is based on [https://github.com/bosmoment/PineTime-apps](https://github.com/bosmoment/PineTime-apps).
+This is an attempt of creating a firware for the Pine64 [PineTime](https://wiki.pine64.org/index.php/PineTime). This project is based on [https://github.com/bosmoment/PineTime-apps](https://github.com/bosmoment/PineTime-apps).
 I'm working on Ubuntu 18.04 Bionic Beaver. For Flashing I use a RaspberryPi 2.
 
 ## Setup
@@ -27,6 +27,8 @@ For the communication between the watch and your phone, as well as synchronizing
 To build an application enter its directory via `cd apps/...`. In the moment, the `pinetime` application is a good starting point. Now use `make all` to build the firmware. 
 If you receive an error about the gcc-arm-none-eabi version, follow [this guide](#make-all-error).
 
+
+
 ## Notes for developing
 
 #### Battery percentage
@@ -53,12 +55,12 @@ If you stumble across this error, please first uninstall any version of `gcc-arm
 Then type in these commands:  
 
 ```Shellsession
-    mkdir -p /opt
-    curl -L -o /opt/gcc-arm-none-eabi.tar.bz2 https://developer.arm.com/-/media/Files/downloads/gnu-rm${ARM_URL}/9-2019q4/gcc-arm-none-eabi-9-2019-q4-major-x86_64-linux.tar.bz2
-    echo "fe0029de4f4ec43cf7008944e34ff8cc /opt/gcc-arm-none-eabi.tar.bz2" | md5sum -c 
-    tar -C /opt -jxf /opt/gcc-arm-none-eabi.tar.bz2 
-    rm -f /opt/gcc-arm-none-eabi.tar.bz2 
-    rm -rf /opt/gcc-arm-none-eabi-*/share/doc
+mkdir -p /opt
+curl -L -o /opt/gcc-arm-none-eabi.tar.bz2 https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2019q4/gcc-arm-none-eabi-9-2019-q4-major-x86_64-linux.tar.bz2
+echo "fe0029de4f4ec43cf7008944e34ff8cc /opt/gcc-arm-none-eabi.tar.bz2" | md5sum -c 
+tar -C /opt -jxf /opt/gcc-arm-none-eabi.tar.bz2 
+rm -f /opt/gcc-arm-none-eabi.tar.bz2 
+rm -rf /opt/gcc-arm-none-eabi-*/share/doc
 ```
 Then add `/opt/gcc-arm-none-eabi-9-2019-q4-major/bin` to your PATH.
 
