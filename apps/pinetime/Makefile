@@ -12,10 +12,9 @@ DEVELHELP ?= 1
 
 USEWIDGETS += home_time
 USEWIDGETS += menu_tiles
-
-CFLAGS += -DHAL_INPUT_SWITCH_XY=1
-CFLAGS += -DHAL_INPUT_REVERSE_X=1
-CFLAGS += -DHAL_INPUT_REVERSE_Y=0
+USEWIDGETS += sysinfo
+USEWIDGETS += face_notification
+USEWIDGETS += face_sports
 
 # basic modules
 include $(CURDIR)/modules.mk

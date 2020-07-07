@@ -23,7 +23,19 @@
 static ili9341_t _disp_dev;
 static bool display_on;
 
+typedef struct {
+    float bound; /**< Upper bound of this region */
+    float percentage;
+} hal_battery_section_t;
 
+static const hal_battery_section_t hal_battery_piecewise_func[] = {
+    {.bound = 3450, .percentage = 0 },
+    {.bound = 3800, .percentage = 4 },
+    {.bound = 3890, .percentage = 25 },
+    {.bound = 3945, .percentage = 57 },
+    {.bound = 4130, .percentage = 96 },
+    {.bound = 4200, .percentage = 100 },
+};
 
 void *hal_display_get_context(void)
 {
@@ -49,6 +61,11 @@ void hal_display_on(void)
     gpio_set(LCD_BACKLIGHT_HIGH);
 }
 
+void hal_display_scroll(uint16_t lines)
+{
+    ili9341_set_scroll_start(hal_display_get_context(), lines);
+}
+
 uint32_t hal_battery_read_voltage(void)
 {
     int sample = adc_sample(BATTERY_ADC, ADC_RES_12BIT);
@@ -58,12 +75,25 @@ uint32_t hal_battery_read_voltage(void)
 int hal_battery_get_percentage(uint32_t voltage)
 {
     /* 4200mV is full, 3500mV is empty */
-    int percentage = (voltage - 3500) / 7;
-    if (percentage > 100) {
-        return 100;
+    int percentage = 100;
+    for (size_t i = 1; i < ARRAY_SIZE(hal_battery_piecewise_func); i++) {
+        const hal_battery_section_t *section = &hal_battery_piecewise_func[i];
+        const hal_battery_section_t *psection = &hal_battery_piecewise_func[i - 1];
+        if (voltage <= section->bound) {
+            /* Linear piecewise approximation of the curve */
+            percentage = (((section->percentage - psection->percentage) /
+                    (section->bound - psection->bound) *
+                    (voltage - psection->bound)) +
+                    psection->percentage);
+            break;
+        }
     }
-    else if (voltage < 3500) {
+
+    if (percentage < 0) {
         return 0;
+    }
+    else if (percentage > 100) {
+        return 100;
     }
     return percentage;
 }
@@ -90,6 +120,16 @@ hal_reset_reason_t hal_get_reset_reason(void)
     }
 }
 
+uint32_t hal_get_internal_temp(void)
+{
+    NRF_TEMP->TASKS_START = 1;
+    while (!NRF_TEMP->EVENTS_DATARDY) {
+    }
+    NRF_TEMP->EVENTS_DATARDY = 0;
+    NRF_TEMP->TASKS_STOP = 1;
+    return NRF_TEMP->TEMP;
+}
+
 /* Should be called somewhere during auto_init */
 void hal_init(void)
 {
@@ -108,18 +148,14 @@ void hal_init(void)
                        sizeof(command_params));
         }
         //ili9341_set_brightness(&_disp_dev, 0xff);
-        hal_display_on();
         LOG_INFO("[ILI9341]: OK!\n");
-        display_on = true;
+        display_on = false;
+
+        ili9341_set_fixed_scroll_area(&_disp_dev, 0, 0);
+        hal_display_scroll(0);
     }
     else {
         LOG_ERROR("[ILI9341]: Device initialization failed\n");
-    }
-    if (hal_input_init() == 0) {
-        LOG_INFO("[cst816s]: OK!\n");
-    }
-    else {
-        LOG_ERROR("[cst816s]: Device initialization failed\n");
     }
     adc_init(BATTERY_ADC);
     gpio_init(POWER_PRESENCE, GPIO_IN);

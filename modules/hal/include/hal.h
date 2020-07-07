@@ -31,6 +31,9 @@ extern "C" {
 #define HAL_DISPLAY_COLORS_BGR              0
 #endif
 
+#define HAL_DISPLAY_ROWS_VISIBLE            240
+#define HAL_DISPLAY_ROWS_TOTAL              320
+
 typedef enum {
     HAL_RESET_REASON_RESETPIN       = 0,
     HAL_RESET_REASON_WATCHDOG       = 1,
@@ -54,6 +57,7 @@ static inline void hal_display_flush(display_t *display, uint16_t x1,
 }
 
 display_t *hal_display_get_context(void);
+void hal_display_scroll(uint16_t lines);
 
 void hal_init(void);
 void hal_display_on(void);
@@ -70,6 +74,7 @@ uint32_t hal_battery_read_voltage(void);
 int hal_battery_get_percentage(uint32_t voltage);
 
 hal_reset_reason_t hal_get_reset_reason(void);
+uint32_t hal_get_internal_temp(void);
 
 /**
  * @brief check if the battery is currently being charged

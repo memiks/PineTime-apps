@@ -12,6 +12,7 @@
 #include "controller.h"
 #include "controller/time.h"
 #include "controller/battery.h"
+#include "widget_conf.h"
 #include "log.h"
 #include "xtimer.h"
 #include "gui.h"
@@ -39,21 +40,65 @@ typedef struct {
     ts_event_t super;
     widget_t *widget;
     controller_action_widget_t action;
+    void *arg;
 } controller_widget_event_t;
 
 static controller_widget_event_t ev_widget = {
     .super = { .super = { .handler = _handle_input_event } }
 };
 
+static void _switch_widget(widget_t *widget, gui_scroll_direction_t dir)
+{
+    if (widget->spec->launch) {
+        widget_launch(widget);
+    }
+    gui_event_submit_switch_widget(widget, dir);
+}
+
+static void _switch_face_idx(int idx, gui_scroll_direction_t dir)
+{
+    widget_t *face = widget_faces_installed[idx];
+    _switch_widget(face, dir);
+}
+
+static void _switch_face_next(void)
+{
+    controller_t *controller = controller_get();
+    controller->face_idx++;
+    if (controller->face_idx >= widget_faces_num) {
+        controller->face_idx = 0;
+    }
+    _switch_face_idx(controller->face_idx, GUI_SCROLL_DIRECTION_DOWN);
+}
+
+static void _switch_face_previous(void)
+{
+    controller_t *controller = controller_get();
+    if (controller->face_idx == 0) {
+        controller->face_idx = widget_faces_num;
+    }
+    controller->face_idx--;
+    _switch_face_idx(controller->face_idx, GUI_SCROLL_DIRECTION_UP);
+}
+
 static void _handle_input_event(event_t *event)
 {
     controller_widget_event_t *ev = (controller_widget_event_t*)event;
     switch(ev->action) {
         case CONTROLLER_ACTION_WIDGET_LEAVE:
-            gui_event_submit_switch_widget(widget_get_menu());
+            _switch_face_idx(0, GUI_SCROLL_DIRECTION_DOWN);
             break;
-        case CONTROLLER_ACTION_WIDGET_HOME:
-            gui_event_submit_switch_widget(widget_get_home());
+        case CONTROLLER_ACTION_WIDGET_MENU:
+            _switch_widget(widget_get_menu(), GUI_SCROLL_DIRECTION_NONE);
+            break;
+        case CONTROLLER_ACTION_WIDGET_SWITCH_TO:
+            _switch_widget(ev->arg, GUI_SCROLL_DIRECTION_NONE);
+            break;
+        case CONTROLLER_ACTION_WIDGET_FACE_NEXT:
+            _switch_face_next();
+            break;
+        case CONTROLLER_ACTION_WIDGET_FACE_PREVIOUS:
+            _switch_face_previous();
             break;
         default:
             break;
@@ -66,7 +111,7 @@ inline uint16_t controller_get_battery_voltage(controller_t *controller)
     return controller_battery_get_voltage(&controller->batt);
 }
 
-int controller_action_submit_input_action(widget_t *widget, controller_action_widget_t action)
+int controller_action_submit_input_action(widget_t *widget, controller_action_widget_t action, void *arg)
 {
     if (ts_event_claim(&ev_widget.super) == -EBUSY) {
         return -EBUSY;
@@ -74,19 +119,15 @@ int controller_action_submit_input_action(widget_t *widget, controller_action_wi
     LOG_DEBUG("[controller] Submitting widget action\n");
     ev_widget.widget = widget;
     ev_widget.action = action;
+    ev_widget.arg = arg;
     event_post(&_control.queue, &ev_widget.super.super);
     return 0;
 }
 
 void controller_add_control_handler(controller_t *controller, control_event_handler_t *handler)
 {
-    /* See note above for reasons against clist.h */
-    control_event_handler_t **last = &controller->handlers;
-    handler->next = NULL;
-    while (*last) {
-        last = &(*last)->next;
-    }
-    *last = handler;
+    handler->next = controller->handlers;
+    controller->handlers = handler;
 }
 
 static void _submit_events(controller_t *controller, controller_event_t event)
@@ -101,13 +142,6 @@ static void _submit_events(controller_t *controller, controller_event_t event)
     }
 }
 
-static void _controller_wdt_setup(controller_t *controller)
-{
-    /* Timeout + half a second for good measure :) */
-    wdt_setup_reboot(0, CONTROLLER_WDT_TIMEOUT_SEC * MS_PER_SEC + 500);
-    wdt_start();
-}
-
 static void _controller_wdt_kick(controller_t *controller)
 {
     if (CONTROLLER_WDT_RESET_ON_BUTTON_PRESS) {
@@ -118,6 +152,14 @@ static void _controller_wdt_kick(controller_t *controller)
     }
 
     wdt_kick();
+}
+
+static void _controller_wdt_setup(controller_t *controller)
+{
+    /* Timeout + half a second for good measure :) */
+    wdt_setup_reboot(0, CONTROLLER_WDT_TIMEOUT_SEC * MS_PER_SEC + 500);
+    wdt_start();
+    _controller_wdt_kick(controller);
 }
 
 #ifdef MODULE_BLEMAN
@@ -161,7 +203,7 @@ static void *_control_thread(void* arg)
 
     widget_init_installed();
 
-    gui_event_submit_switch_widget(widget_get_home());
+    _switch_face_idx(0, GUI_SCROLL_DIRECTION_NONE);
     while(1)
     {
         thread_flags_t flags = thread_flags_wait_any(

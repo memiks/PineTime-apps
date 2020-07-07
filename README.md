@@ -1,148 +1,67 @@
-[![Build Status](https://api.cirrus-ci.com/github/bosmoment/PineTime-apps.svg)](https://cirrus-ci.com/github/bosmoment/PineTime-apps)
+# Overview
+This is an attempt of creating a firware for the Pine64 [PineTime](https://wiki.pine64.org/index.php/PineTime). This project is based on [https://github.com/bosmoment/PineTime-apps](https://github.com/bosmoment/PineTime-apps).
+I'm working on Ubuntu 18.04 Bionic Beaver. For Flashing I use a RaspberryPi 2.
 
-# Bosmoment-style Pinetime firmware applications
+## Setup
 
-Friendly firmware applications for the Pinetime!
-
-This repository contains a number of applications and helper modules specific
-for the [PineTime] open source smartwatch. 
-
-Highlights:
-
-- Built on top of [RIOT], an open source embedded operating system
-- Apache [NimBLE] as an open-source bluetooth 5.0 stack.
-- [LittlevGL] for the user interface.
-
-### Pre-build Binaries
-
-Fresh binaries from the CI:
-
-- [PineTime.elf](https://api.cirrus-ci.com/v1/artifact/github/bosmoment/PineTime-apps/build/binaries/PineTime.elf)
-- [PineTime.bin](https://api.cirrus-ci.com/v1/artifact/github/bosmoment/PineTime-apps/build/binaries/PineTime.bin)
-
-## Features
-
-- *Bluetooth LE*: provided by Nimble
-- *Bluetooth pairing support*
-- *Time synchronisation*: Bluetooth GATT Current Time Service client
-- *Time keeping*: nRF52832 RTC for ticks per second time/date updates
-- *Graphical user interface*: via LittleVGL.
-- *Touch screen driver*: a basic cst816s touch screen driver is included in the RIOT fork
-
-And the default "home" screen includes:
-- *Time/date*: The current minutes and hour are shown as numbers, the day,
-               the month and year are shown and a second "hand" is shown as a
-               circular meter.
-- *Battery status*: Battery status is available on the main screen
-- *Bluetooth status*: Bluetooth connection and advertisement mode is shown on
-                      the screen
-
-More to follow
-
-## Structure
-
-The project is separated into a number of directories:
-
-- *RIOT*: The RIOT submodule used for compilation
-- *apps*: Contains firmware applications for the PineTime.
-- *modules*: Additional modules written to support the firmware applications
-- *widgets*: A collection of small user applications for the end user of the
-  PineTime, for example: a stopwatch widget; a configuration widget; a
-  heartbeat graph widget.
-
-## Getting started
-
-### Repository setup
-
-When checking out this repository, don't forget to initialize the RIOT submodule
-contained within this repository with:
+Clone this repo with:
+```Shellsession
+git clone https://github.com/tht-jxny/PineTime-Firmware-with-RIOT.git PineTime
+```
+RIOT won't be cloned automatically, but it is needed.  
+To initialize the RIOT submodule simply type in:
 
 ```Shellsession
 git submodule init
 git submodule update
 ```
 
-### Building applications
+## Developing apps for PineTime
 
-Applications are contained in the `apps` dir with a single application per
-directory. The `pinetime` application should give you a good starting point.
+The OS this project is based on is [RIOT](https://riot-os.org/). It is very helpful to read the  [Quick Start](https://doc.riot-os.org/index.html#the-quickest-start), so you get familiar with the project structure.  
+For GUI development, [LittlevGL](https://littlevgl.com/) is used. I tried the simulator for VSCode but failed. Therefore I decided to use EclipseCDT for simulating my GUI-code. An excellent installation guide can be found [here](https://github.com/littlevgl/lv_sim_eclipse_sdl).  
+For the communication between the watch and your phone, as well as synchronizing time and date via bluetooth, [nimBLE](https://github.com/apache/mynewt-nimble) will be used.
 
-Use `make all` in the application directory to build the firmware, `make flash`
-to flash it on the target and `make term` to get a serial connection to the
-device. 
+## Building and Flashing
 
-### Development
+To build an application enter its directory via `cd apps/...`. In the moment, the `pinetime` application is a good starting point. Now use `make all` to build the firmware. 
+If you receive an error about the gcc-arm-none-eabi version, follow [this guide](#make-all-error).
 
-As the project is based on RIOT, it helps to get familiar with RIOT and check
-which functionality is provided by the OS.
-There is a [quick start] guide available for RIOT to get familiar with RIOT's
-build system and to validate your toolchain functionality. Doxygen-based API
-documentation is also available there.
 
-Currently the Segger J-Link tools are used for flashing the application. It is
-possible to use a different programmer by overriding the settings in the
-`Makefile.include` for the `pinetime` board in the RIOT tree. 
 
-## Bluetooth LE
+## Notes for developing
 
-Currently the firmware is always advertising if no connection is active. As
-soon as a host connects to the PineTime, the advertising is stopped and
-continues when the host disconnects.
+#### Battery percentage
 
-Bonding is available and useable, but the bonds are not persistent between
-reboots. (see Planned features).
+**Correspondent Voltages and Percentages**
 
-A custom UUID is included in the advertisement to recognise the device by:
+The following table is a result of [this graph](https://forum.pine64.org/showthread.php?tid=8147).
+
+Voltage | Percentage  
+---|---  
+>3.9V | 100%  
+3.75 V | 75%  
+3.7 V  | 60%  
+3.665 V | 50%  
+3.62 V | 30%  
+3.58 V | 15%  
+3.55 V | 5%  
+<3.55 V | LOW  
+
+## Troubleshooting
+
+#### `make all` error with gcc-arm-none-eabi-9-2019-q4-major <a name="make-all-error"></a>
+If you stumble across this error, please first uninstall any version of `gcc-arm-none-eabi`.  
+Then type in these commands:  
+
+```Shellsession
+mkdir -p /opt
+curl -L -o /opt/gcc-arm-none-eabi.tar.bz2 https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2019q4/gcc-arm-none-eabi-9-2019-q4-major-x86_64-linux.tar.bz2
+echo "fe0029de4f4ec43cf7008944e34ff8cc /opt/gcc-arm-none-eabi.tar.bz2" | md5sum -c 
+tar -C /opt -jxf /opt/gcc-arm-none-eabi.tar.bz2 
+rm -f /opt/gcc-arm-none-eabi.tar.bz2 
+rm -rf /opt/gcc-arm-none-eabi-*/share/doc
 ```
-9851dc0a-b04a-1399-5646-3b38788cb1c5
-```
+Then add `/opt/gcc-arm-none-eabi-9-2019-q4-major/bin` to your PATH.
 
-This UUID can be used for Bluetooth LE filters in Android and such. The device
-name itself can be customized to your liking and is not used for identifying the
-device.
-
-### Companion phone app
-
-A fork of [GadgetBridge] is available with support for this firmware. The fork
-uses the custom UUID specified above to filter and identify the device.
-
-The GadgetBridge app should pick up the device when scanning and allow pairing
-with the device. As long as the PineTime remembers the bond, the app and the
-Pinetime should be able to restore the secure connection.
-
-The GadgetBridge fork is configured to only allow encrypted reads to the current
-time characteristic. The PineTime firmware automatically requests pairing when 
-it receives an insufficient encryption error back from the app when requesting
-the time.
-
-## Tips
-
-- STDIO is implemented via the Segger RTT protocol. It is non-blocking by
-  default, blocking mode can be enabled by adding
-  `STDIO_RTT_ENABLE_BLOCKING_STDOUT` to the CFLAGS. **Note**: the firmware will
-  block (hang) on STDIO if no RTT client is attached.
-
-- The directory where a RIOT tree is expected can be overridden by setting the
-  `RIOTBASE` variable in the application makefile or from the command line.
-
-- A fork of the Android [GadgetBridge] application is available with basic
-  support for this RIOT PineTime application.
-
-- By default the watchdog timer is running with a 5 second timeout. Every second
-  the controller will kick the watchdog timer to reset the timeout, unless the
-  button is pressed. A long press of the button will effectively cause a
-  watchdog timer reset of the system.
-
-## Planned features
-
-- Device side Bluetooth key code confirmation (Only the host verifies the
-  pairing code at the moment, the firmware always confirms the code as valid)
-- Persistent Bluetooth bonds
-- Secure over the air updates
-
-[PineTIme]: https://www.pine64.org/pinetime/
-[RIOT]: https://github.com/RIOT-os/RIOT/
-[NimBLE]: https://github.com/apache/mynewt-nimble
-[LittleVGL]: https://github.com/littlevgl/lvgl
-[quick start]: https://doc.riot-os.org/index.html#the-quickest-start
-[GadgetBridge]: https://codeberg.org/bergzand/Gadgetbridge/src/branch/riotwatch/initial
+Now it should work.

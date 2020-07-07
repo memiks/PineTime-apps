@@ -32,17 +32,6 @@ home_terminal_widget_t home_terminal_widget = {
     .widget = {.spec = &home_terminal_spec }
 };
 
-/* Quick hack to measure the temperature */
-#include "board.h"
-static uint32_t _get_internal_temp(void)
-{
-    NRF_TEMP->TASKS_START = 1;
-    while (!NRF_TEMP->EVENTS_DATARDY) {
-    }
-    NRF_TEMP->EVENTS_DATARDY = 0;
-    return NRF_TEMP->TEMP;
-}
-
 static const uint32_t _state2color[] = {
     [BLEMAN_BLE_STATE_INACTIVE] = 0x00,
     [BLEMAN_BLE_STATE_DISCONNECTED] = 0xDC143C,
@@ -129,7 +118,7 @@ static void _screen_terminal_pressed(lv_obj_t *obj, lv_event_t event)
         case LV_EVENT_CLICKED:
             LOG_INFO("Screen press event\n");
             controller_action_submit_input_action(&ht->widget,
-                                                CONTROLLER_ACTION_WIDGET_LEAVE);
+                                                CONTROLLER_ACTION_WIDGET_MENU, NULL);
         default:
             break;
     }
@@ -233,7 +222,7 @@ int home_terminal_event(widget_t *widget, controller_event_t event)
     if (event == CONTROLLER_EVENT_TICK) {
         memcpy(&htwidget->time, controller_time_get_time(controller_get()), sizeof(controller_time_spec_t));
         _update_power_stats(htwidget);
-        htwidget->quartertemp = _get_internal_temp();
+        htwidget->quartertemp = hal_get_internal_temp();
     }
 #ifdef MODULE_BLEMAN
     if (event == CONTROLLER_EVENT_BLUETOOTH) {

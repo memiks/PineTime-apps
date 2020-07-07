@@ -22,25 +22,22 @@ static const widget_spec_t home_time_spec;
 static lv_style_t style_time;
 
 static int _screen_time_update_screen(widget_t *widget);
-unsigned hours = 19;
-unsigned minutes = 43;
-unsigned seconds = 20;
 
 /* TODO: make configurable */
-static const unsigned battery_low = 20;               /* Battery low percentage */
-static const uint32_t battery_low_color = 0xDC143C;   /* Electric crimson */
-static const uint32_t battery_mid_color = 0xFF7F00;   /* Orange */
-static const uint32_t battery_full_color = 0x138808;  /* India green */
+static const unsigned battery_low = 20; /* Battery low percentage */
+static const char *battery_low_color = GUI_COLOR_LBL_BASIC_RED;
+static const char *battery_mid_color = GUI_COLOR_LBL_BASIC_YELLOW;
+static const char *battery_full_color = GUI_COLOR_LBL_BASIC_GREEN;
 /* Widget context */
 home_time_widget_t home_time_widget = {
     .widget = {.spec = &home_time_spec }
 };
 
-static const uint32_t _state2color[] = {
-    [BLEMAN_BLE_STATE_INACTIVE] = 0x00,
-    [BLEMAN_BLE_STATE_DISCONNECTED] = 0x00,
-    [BLEMAN_BLE_STATE_ADVERTISING] = 0x007BA7, /* Cerulean */
-    [BLEMAN_BLE_STATE_CONNECTED] = 0x138808, /* India green */
+static const char *_state2color[] = {
+    [BLEMAN_BLE_STATE_INACTIVE] = "#000000",
+    [BLEMAN_BLE_STATE_DISCONNECTED] = GUI_COLOR_LBL_BASIC_RED,
+    [BLEMAN_BLE_STATE_ADVERTISING] = GUI_COLOR_LBL_BASIC_BLUE,
+    [BLEMAN_BLE_STATE_CONNECTED] = GUI_COLOR_LBL_DARK_GREEN,
 };
 
 static inline home_time_widget_t *_from_widget(widget_t *widget)
@@ -60,7 +57,7 @@ static void _screen_time_pressed(lv_obj_t *obj, lv_event_t event)
         case LV_EVENT_CLICKED:
             LOG_INFO("Screen press event\n");
             controller_action_submit_input_action(&ht->widget,
-                                                CONTROLLER_ACTION_WIDGET_LEAVE);
+                                                CONTROLLER_ACTION_WIDGET_MENU, NULL);
         default:
             break;
     }
@@ -125,16 +122,16 @@ static void _home_time_set_bt_label(home_time_widget_t *htwidget)
         lv_label_set_text(htwidget->lv_ble, "");
     }
     else {
-        uint32_t color = _state2color[htwidget->ble_state];
+        const char *color = _state2color[htwidget->ble_state];
         lv_label_set_text_fmt(htwidget->lv_ble,
-                              "#%06" PRIx32 " " LV_SYMBOL_BLUETOOTH"#",
+                              "%s "LV_SYMBOL_BLUETOOTH"#",
                               color);
     }
 }
 
 static void _home_time_set_power_label(home_time_widget_t *htwidget)
 {
-    uint32_t color = battery_mid_color;
+    const char *color = battery_mid_color;
     unsigned percentage = hal_battery_get_percentage(htwidget->millivolts);
     if (percentage <= battery_low) {
         color = battery_low_color;
@@ -144,7 +141,7 @@ static void _home_time_set_power_label(home_time_widget_t *htwidget)
         color = battery_full_color;
     }
     lv_label_set_text_fmt(htwidget->lv_power,
-                          "#%06" PRIx32 " %u%%%s#\n(%"PRIu32"mV)",
+                          "%s %u%%%s#\n(%"PRIu32"mV)",
                           color, percentage,
                           htwidget->powered ? LV_SYMBOL_CHARGE : " ",
                           htwidget->millivolts
@@ -267,9 +264,11 @@ int home_time_event(widget_t *widget, controller_event_t event)
 static const widget_spec_t home_time_spec = {
     .name = "time",
     .init = home_time_init,
+    .launch = home_time_launch,
     .draw = home_time_draw,
     .container = home_time_get_container,
     .close = home_time_close,
     .event = home_time_event,
     .update_draw = home_time_update_screen,
+    .gui_event = widget_face_gui_event,
 };

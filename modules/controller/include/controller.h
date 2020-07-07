@@ -63,10 +63,10 @@ typedef struct {
 #ifdef MODULE_BLEMAN
     bleman_event_handler_t handler;
 #endif
-    widget_t *active_widget;
     control_event_handler_t *handlers;
     kernel_pid_t pid;
     hal_reset_reason_t reset_reason;    /**< Current reset reason */
+    size_t face_idx;
 } controller_t;
 
 #define CONTROLLER_EVENT_FLAG(flag)     (1 << flag)
@@ -76,7 +76,8 @@ controller_t *controller_get(void);
 uint16_t controller_get_battery_voltage(controller_t *controller);
 
 int controller_action_submit_input_action(widget_t *widget,
-                                        controller_action_widget_t action);
+                                        controller_action_widget_t action,
+                                        void *arg);
 
 void controller_add_control_handler(controller_t *controller,
                                     control_event_handler_t *handler);
